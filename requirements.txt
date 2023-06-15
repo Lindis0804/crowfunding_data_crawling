@@ -1,0 +1,6 @@
+selenium
+webdriver_manager
+pymongo
+requests
+urllib3
+time

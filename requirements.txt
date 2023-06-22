@@ -3,4 +3,6 @@ webdriver_manager
 pymongo
 requests
 urllib3
-time
+fastapi
+kafka
+confluent_kafka

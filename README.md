@@ -1,2 +1,2 @@
 -Open terminal, run command "pip install -r requirements.txt".
--Run uvicorn main:app --reload
+-Run command "uvicorn main:app --reload"

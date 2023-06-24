@@ -14,7 +14,11 @@ import traceback
 import multiprocessing
 from typing import Union
 from fastapi import FastAPI
-from conf_kafka.producer import ProjectProducer
+from n_kafka.producer import ProjectProducer
+from pymongo import MongoClient
+import os
+from dotenv import load_dotenv
+from datetime import datetime
 
 
 def split_list(lst, k):
@@ -53,7 +57,7 @@ def get_first_not_null_item(lsts):
     return lsts[-1]
 
 
-def get_detail_project(page, url, error_url_file, producer=[]):
+def get_detail_project(page, url, error_url_file, producer=[], web_driver_wait=5):
     """
     This func is used to crawl data of a detail project page of Kickstarter website
 
@@ -73,8 +77,7 @@ def get_detail_project(page, url, error_url_file, producer=[]):
         browser.get(url)
         # sleep(2)
         # t = title.text
-        wait = WebDriverWait(browser, 10)
-        # title = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR,'h2.type-28.type-24-md.soft-black.mb1.project-name')))
+        wait = WebDriverWait(browser, web_driver_wait)
         title = get_first_not_null_item(list(map(lambda a: a.text, browser.find_elements(
             By.CSS_SELECTOR, "h2.type-24-md.soft-black.mb1.project-name"))))
         description = get_first_not_null_item(list(map(lambda a: a.text, browser.find_elements(
@@ -98,9 +101,9 @@ def get_detail_project(page, url, error_url_file, producer=[]):
         mark_field_locations = list(map(lambda a: a.text, browser.find_elements(
             By.CSS_SELECTOR, "a.nowrap.navy-700.flex.items-center.medium.mr3.type-12.keyboard-focusable > span.ml1"
         )))
-        mark = mark_field_locations[3]
-        field = mark_field_locations[4]
-        location = mark_field_locations[5]
+        mark = mark_field_locations[-3]
+        field = mark_field_locations[-2]
+        location = mark_field_locations[-1]
         num_of_comment = get_first_not_null_item(list(map(lambda a: a.text, browser.find_elements(
             By.CSS_SELECTOR,
             "a.js-analytics-section.js-load-project-comments.js-load-project-content.mx3.project-nav__link--comments.tabbed-nav__link.type-14 > span.count"
@@ -119,15 +122,12 @@ def get_detail_project(page, url, error_url_file, producer=[]):
             "num_of_comment": num_of_comment
         }
         if (len(producer) == 2):
-            broker, topic = producer
-            print("[*] Sending to broker "+broker+", topic: "+topic)
+            kafka_broker, topic = producer
+            print("[*] Sending to broker:", kafka_broker, ", topic:", topic)
             print(str(res))
-            projectProducer = ProjectProducer(broker=broker)
-            try:
-                projectProducer.send_msg_sync(res, topic=topic)
-                print("[*] Send to kafka successfully.")
-            except:
-                print("[*] Send to kafka fail.")
+            projectProducer = ProjectProducer(broker=kafka_broker, topic=topic)
+            projectProducer.send_msg(res)
+            print("[*] Send to kafka successfully.")
 
         else:
             # file = open("./data/result.txt", "a")
@@ -138,18 +138,30 @@ def get_detail_project(page, url, error_url_file, producer=[]):
 
             # save to mongodb
             print("[*] Save data to mongodb.")
-    except:
-        error_url = str(page)+","+url+"\n"
-        error_url_file_obj = open(error_url_file, "a")
-        error_url_file_obj.write(error_url)
-        error_url_file_obj.close()
-        traceback.print_exc()
+    except Exception as e:
+        load_dotenv()
+        err_url = {
+            "page": page,
+            "url": url,
+            "err": str(e),
+            "time": datetime.now()
+        }
+        try:
+            client = MongoClient(os.environ.get("mongodb"))
+            db = client["local"]
+            collection = db["kickstarter_err_url"]
+            result = collection.insert_one(err_url)
+            client.close()
+        except:
+            traceback.print_exc()
+        # print("error")
+        # traceback.print_exc()
     browser.close()
 # get_data(current_page=current_page)
 # get_detail_project(0,"https://www.kickstarter.com/projects/mlspencer/dragon-mage-deluxe-collectors-edition-hardcover")
 
 
-def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, producer=[]):
+def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, producer=[], web_driver_wait=5):
     """
     This func is used to crawl data from Kickstarter website (
         https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=
@@ -158,7 +170,7 @@ def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, 
     Args:
         url (string): link to website
         current_page (int): current page index of page that is being crawled
-        num_of_thread (int): num of crawling thread 
+        num_of_thread (int): num of crawling thread
         error_url_file (string): name of file that contains a list of error_url_file that can not be crawled
         checkpoint_file (string): name of file that contains information about the index of page that is being crawled
     """
@@ -187,20 +199,20 @@ def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, 
             last_prj_links = split_prj_links[-1]
             print("split_prj_links: ")
             print(split_prj_links)
-            for links in split_prj_links[:-1]:
+            for links in split_prj_links:
                 threads = [threading.Thread(
-                    target=get_detail_project, args=(current_page, link, error_url_file, producer)) for link in links]
+                    target=get_detail_project, args=(current_page, link, error_url_file, producer, web_driver_wait)) for link in links]
                 for thread in threads:
                     thread.start()
                 for thread in threads:
                     thread.join()
                 threads = []
-            threads = [threading.Thread(
-                target=get_detail_project, args=(current_page, link, error_url_file, producer)) for link in last_prj_links]
-            for thread in threads:
-                thread.start()
-            for thread in threads:
-                thread.join()
+            # threads = [threading.Thread(
+            #     target=get_detail_project, args=(current_page, link, error_url_file, producer)) for link in last_prj_links]
+            # for thread in threads:
+            #     thread.start()
+            # for thread in threads:
+            #     thread.join()
             threads = []
             page = page+1
         except:

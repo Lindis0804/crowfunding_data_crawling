@@ -6,3 +6,5 @@ urllib3
 fastapi
 kafka
 confluent_kafka
+kafka-python
+python-dotenv

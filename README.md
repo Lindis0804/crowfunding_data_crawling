@@ -1,2 +1,6 @@
+-Fix .env file by your kafka host and mongodb host
 -Open terminal, run command "pip install -r requirements.txt".
--Run command "uvicorn main:app --reload"
+-Run kafka server on windows, follow this link:
+https://www.youtube.com/watch?v=AJ_CLyLiBCM&t=246s&ab_channel=JMaster
+-Run file crawl_data_server.py
+-Run file process_data_server.py

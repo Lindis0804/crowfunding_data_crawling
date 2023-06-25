@@ -57,7 +57,7 @@ def get_first_not_null_item(lsts):
     return lsts[-1]
 
 
-def get_detail_project(page, url, error_url_file, producer=[], web_driver_wait=5):
+def get_detail_project(page, url, error_url_file, producer=[], web_driver_wait=5, delay_time=0.5):
     """
     This func is used to crawl data of a detail project page of Kickstarter website
 
@@ -71,11 +71,12 @@ def get_detail_project(page, url, error_url_file, producer=[], web_driver_wait=5
     browser = webdriver.Chrome(
         service=(Service(ChromeDriverManager().install()))
     )
+    sleep(delay_time)
     try:
         print("crawl url: ")
         print(url)
         browser.get(url)
-        # sleep(2)
+        sleep(2)
         # t = title.text
         wait = WebDriverWait(browser, web_driver_wait)
         title = get_first_not_null_item(list(map(lambda a: a.text, browser.find_elements(
@@ -139,21 +140,22 @@ def get_detail_project(page, url, error_url_file, producer=[], web_driver_wait=5
             # save to mongodb
             print("[*] Save data to mongodb.")
     except Exception as e:
-        load_dotenv()
-        err_url = {
-            "page": page,
-            "url": url,
-            "err": str(e),
-            "time": datetime.now()
-        }
-        try:
-            client = MongoClient(os.environ.get("mongodb"))
-            db = client["local"]
-            collection = db["kickstarter_err_url"]
-            result = collection.insert_one(err_url)
-            client.close()
-        except:
-            traceback.print_exc()
+        # load_dotenv()
+        # err_url = {
+        #     "page": page,
+        #     "url": url,
+        #     "err": str(e),
+        #     "time": datetime.now()
+        # }
+        # try:
+        #     client = MongoClient(os.environ.get("mongodb"))
+        #     db = client["local"]
+        #     collection = db["kickstarter_err_url"]
+        #     result = collection.insert_one(err_url)
+        #     client.close()
+        # except:
+        #     traceback.print_exc()
+        print("error in", url)
         # print("error")
         # traceback.print_exc()
     browser.close()
@@ -161,7 +163,7 @@ def get_detail_project(page, url, error_url_file, producer=[], web_driver_wait=5
 # get_detail_project(0,"https://www.kickstarter.com/projects/mlspencer/dragon-mage-deluxe-collectors-edition-hardcover")
 
 
-def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, producer=[], web_driver_wait=5):
+def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, producer=[], web_driver_wait=5, delay_time=0.5):
     """
     This func is used to crawl data from Kickstarter website (
         https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=
@@ -196,28 +198,27 @@ def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, 
             print(len(prj_links))
             threads = []
             split_prj_links = split_list(prj_links, num_of_thread)
-            last_prj_links = split_prj_links[-1]
-            print("split_prj_links: ")
-            print(split_prj_links)
             for links in split_prj_links:
-                threads = [threading.Thread(
-                    target=get_detail_project, args=(current_page, link, error_url_file, producer, web_driver_wait)) for link in links]
+                threads = []
+                delay = 0
+                for link in links:
+                    delay = delay+delay_time
+                    threads.append(threading.Thread(
+                        target=get_detail_project, args=(current_page, link, error_url_file, producer, web_driver_wait, delay)))
                 for thread in threads:
                     thread.start()
                 for thread in threads:
                     thread.join()
                 threads = []
-            # threads = [threading.Thread(
-            #     target=get_detail_project, args=(current_page, link, error_url_file, producer)) for link in last_prj_links]
-            # for thread in threads:
-            #     thread.start()
-            # for thread in threads:
-            #     thread.join()
             threads = []
             page = page+1
         except:
+            print("err, page = ", page)
             file = open(checkpoint_file, "w")
             file.write(str({"page": page}))
             traceback.print_exc()
+            browser.close()
+            get_data(url, current_page, num_of_thread, error_url_file,
+                     checkpoint_file, producer=producer, web_driver_wait=web_driver_wait, delay_time=2)
             break
         browser.close()

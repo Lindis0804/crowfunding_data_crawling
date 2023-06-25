@@ -17,4 +17,5 @@ chrome_options.add_experimental_option('detach', True)
 kafka_broker = os.environ.get("kafka_broker")
 topic = "kickstarter-project"
 get_data(current_page=current_page, url=url, num_of_thread=4,
-         checkpoint_file="./data/checkpoint.csv", error_url_file="./data/error_url.csv", producer=[kafka_broker, topic], web_driver_wait=10)
+         checkpoint_file="./data/checkpoint.csv", error_url_file="./data/error_url.csv",
+         producer=[kafka_broker, topic], web_driver_wait=10, delay_time=2)

@@ -1,0 +1,10 @@
+hello
+hihello
+hihello
+hihello
+hihello
+hihello
+hihello
+hihello
+hihello
+hi{"page": 0, "err": "Message: no such window: target window already closed\nfrom unknown error: web view not found\n  (Session info: chrome=114.0.5735.134)\nStacktrace:\nBacktrace:\n\tGetHandleVerifier [0x00FDA813+48355]\n\t(No symbol) [0x00F6C4B1]\n\t(No symbol) [0x00E75358]\n\t(No symbol) [0x00E5D293]\n\t(No symbol) [0x00EBE37B]\n\t(No symbol) [0x00ECC473]\n\t(No symbol) [0x00EBA536]\n\t(No symbol) [0x00E982DC]\n\t(No symbol) [0x00E993DD]\n\tGetHandleVerifier [0x0123AABD+2539405]\n\tGetHandleVerifier [0x0127A78F+2800735]\n\tGetHandleVerifier [0x0127456C+2775612]\n\tGetHandleVerifier [0x010651E0+616112]\n\t(No symbol) [0x00F75F8C]\n\t(No symbol) [0x00F72328]\n\t(No symbol) [0x00F7240B]\n\t(No symbol) [0x00F64FF7]\n\tBaseThreadInitThunk [0x779B7D59+25]\n\tRtlInitializeExceptionChain [0x77D5B74B+107]\n\tRtlClearBits [0x77D5B6CF+191]\n"}

@@ -8,3 +8,6 @@ kafka
 confluent_kafka
 kafka-python
 python-dotenv
+undetected_chromedriver
+selenium-stealth
+fake_useragent

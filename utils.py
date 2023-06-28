@@ -23,7 +23,10 @@ import undetected_chromedriver as uc
 from selenium_stealth import stealth
 import random
 import json
+import requests
 from fake_useragent import UserAgent
+import pytz
+import tzdata
 
 
 def right_trim(lsts):
@@ -97,6 +100,17 @@ def set_up_browser():
         service=service, options=chrome_options)
 
     return browser
+
+
+def save_to_json_file(file_addr, data):
+    with open(file_addr, "r") as jf:
+        cur_data = json.load(jf)
+    if (isinstance(cur_data, list)):
+        cur_data.append(data)
+    elif (isinstance(cur_data, dict)):
+        cur_data = data
+    with open(file_addr, "w") as jf:
+        json.dump(cur_data, jf)
 
 
 def save_to_file(file_addr, content, mode="a"):
@@ -304,7 +318,7 @@ def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, 
 
 
 def field_filter(x):
-    obj = json.loads(x.encode("utf-8"))
+    obj = json.loads(x)
     del obj["creator"]["avatar"]
     del obj["creator"]["urls"]
     del obj["category"]["urls"]
@@ -317,7 +331,9 @@ def field_filter(x):
     return obj
 
 
-def get_kickstarter_project_data_list_by_page(page, url="https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=", error_url_file="./data/err_url.csv", producer=[], web_driver_wait=5, delay_time=0.5):
+def get_kickstarter_project_data_list_by_page(page,
+                                              url="https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=",
+                                              error_page_file="./data/kickstarter_err_page.json", producer=[], web_driver_wait=5, delay_time=0.5):
     browser = set_up_browser()
     sleep(delay_time)
 
@@ -328,33 +344,141 @@ def get_kickstarter_project_data_list_by_page(page, url="https://www.kickstarter
             By.CSS_SELECTOR, "div[class='js-react-proj-card grid-col-12 grid-col-6-sm grid-col-4-lg']")[6:]))
         print(data)
         print(len(data))
+        if (len(producer) == 2):
+            kafka_broker, topic = producer
+            print("[*] Data from kickstarter sending to broker:",
+                  kafka_broker, ", topic:", topic)
+            projectProducer = ProjectProducer(broker=kafka_broker, topic=topic)
+            for item in data:
+                projectProducer.send_msg(item)
+
+        else:
+
+            # save to mongodb
+            print("[*] Save data to mongodb.")
     except Exception as e:
-        err_url = {
+        err_page = {
             "page": page,
             "err": str(e),
         }
-        save_to_file(error_url_file, err_url)
+        save_to_json_file(error_page_file, err_page)
         traceback.print_exc()
-    if (len(producer) == 2):
-        kafka_broker, topic = producer
-        print("[*] Sending to broker:", kafka_broker, ", topic:", topic)
-        projectProducer = ProjectProducer(broker=kafka_broker, topic=topic)
-        for item in data:
-            projectProducer.send_msg(item)
-
-    else:
-
-        # save to mongodb
-        print("[*] Save data to mongodb.")
 
         # get_detail_project(
         #     0, "https://www.kickstarter.com/projects/alexispowell/stay-at-home-to-sleep-in-lonely-gimmicks-ep?ref=discovery")
 
 
-def crawl_kickstarter_project_data(current_page, url="https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=", error_url_file="./data/err_url.csv", check_point_file="./data/checkpoint.csv", producer=[], web_driver_wait=5, delay_time=0.5):
+def crawl_kickstarter_project_data(current_page, producer=[],
+                                   url="https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=",
+                                   error_page_file="./data/kickstarter_err_page.json", check_point_file="./data/kickstarter_checkpoint.json",
+                                   web_driver_wait=5, delay_time=5):
     page = current_page
     while (1):
         get_kickstarter_project_data_list_by_page(
-            page, url, error_url_file, producer, web_driver_wait, delay_time)
+            page, url, error_page_file, producer, web_driver_wait, delay_time)
         page = page+1
-        save_to_file(check_point_file, {"page": page}, mode="w")
+        save_to_json_file(check_point_file, {"page": page})
+        sleep(delay_time)
+
+
+def convert_timestring_to_unix(time_string):
+
+    # convert time string to datetime object
+    dt = datetime.fromisoformat(time_string)
+
+    # define timezone
+    timezone = pytz.timezone("America/Los_Angeles")
+
+    # apply timezone for datetime
+    localized_dt = timezone.localize(dt.replace(tzinfo=None))
+
+    # convert datetime object to unix timestamp
+    unix_time = int(localized_dt.timestamp())
+
+    return unix_time
+
+
+def format_indiegogo_project_data(input):
+    data = input
+
+    # change category
+    del data["category_url"]
+    data["category"] = {
+        "name": data.pop("category")
+    }
+
+    # change close date -> deadline
+    data["deadline"] = convert_timestring_to_unix(data.pop("close_date"))
+
+    # change open date -> launched_at
+    data["launched_at"] = convert_timestring_to_unix(data.pop("open_date"))
+
+    # change fund_raised_amount -> pledged
+    data["pledged"] = data.pop("funds_raised_amount")
+
+    # change funds_raised_percent -> percent_funded
+    data["percent_funded"] = data.pop("funds_raised_percent")
+
+    # change title -> name
+    data["name"] = data.pop("title")
+
+    # change tagline -> blurb
+    data["blurb"] = data.pop("tagline")
+
+    # change project_type -> ????
+
+    # change tags to -> ?????
+    return data
+
+
+def crawl_diegogo_project_data(current_page, producer=[], url="https://www.indiegogo.com/private_api/discover",
+                               err_page_file="./data/indiegogo_err_page.json", check_point_file="./data/indiegogo_checkpoint.json"):
+    page = current_page
+    request_body = json.dumps({"sort": "trending", "category_main": None, "category_top_level": None,
+                               "project_timing": "all", "project_type": "campaign", "page_num": page, "per_page": 12, "q": "", "tags": []})
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0"
+    }
+    while (1):
+        try:
+            res = requests.post(url, data=request_body, headers=headers)
+            sleep(30)
+            if res.status_code == 200:
+                data = list(
+                    map(lambda x: format_indiegogo_project_data(x),
+                        json.loads(res.text)["response"]["discoverables"]))
+                if (len(producer) == 2):
+                    kafka_broker, topic = producer
+                    print("[*] Data from Indiegogo sending to broker:",
+                          kafka_broker, ", topic:", topic)
+                    projectProducer = ProjectProducer(
+                        broker=kafka_broker, topic=topic)
+                    for item in data:
+                        projectProducer.send_msg(item)
+                else:
+                    print("[*] Save to mongodb")
+            elif res.status_code == 400:
+                page = 0
+            page = page+1
+            save_to_json_file(check_point_file, {"page": page})
+        except Exception as e:
+            err_page = {
+                "page": page,
+                "err": str(e),
+            }
+            save_to_json_file(err_page_file, err_page)
+            traceback.print_exc()
+
+
+# get_kickstarter_project_data_list_by_page(0)
+# crawl_diegogo_project_data(0)
+# print(convert_timestring_to_unix("2023-07-27T23:59:59-07:00"))
+# data1 = {
+#     "page": 100
+# }
+# data2 = {
+#     "name": "Đạt"
+# }
+# save_to_json_file("./data/indiegogo_checkpoint.json", data1)
+# save_to_json_file("./data/indiegogo_err_page.json", data2)

@@ -1,0 +1,62 @@
+{
+    "kickstarter": {
+        "id": 100951279,
+        "name": "The Great Weather Diviner - A Novel About A Groundhog",
+        "blurb": "We're reimagining the story of world's greatest weather predictor.",
+        "goal": 5000.0,
+        "pledged": 2295.0,
+        "slug": "the-great-weather-diviner-a-novel-about-a-groundhog",
+        "country": "US",
+        "country_displayable_name": "the United States",
+        "currency": "USD",
+        "currency_symbol": "$",
+        "deadline": 1690461101,
+        "created_at": 1684245437,
+        "launched_at": 1687869101,
+        "backers_count": 30,
+        "static_usd_rate": 1.0,
+        "usd_pledged": "2295.0",
+        "converted_pledged_amount": 2295,
+        "fx_rate": 1.0,
+        "usd_exchange_rate": 1.0,
+        "current_currency": "USD",
+        "usd_type": "international",
+        "creator": {
+            "id": 1390851456,
+            "name": "Andrew Dolberg",
+            "slug": "asdolberg",
+            "is_registered": null,
+            "is_email_verified": null,
+            "chosen_currency": null,
+            "is_superbacker": null
+        },
+        "location": {
+            "id": 2390961,
+            "name": "Delray Beach",
+            "slug": "delray-beach-fl",
+            "short_name": "Delray Beach, FL",
+            "displayable_name": "Delray Beach, FL",
+            "localized_name": "Delray Beach",
+            "country": "US",
+            "state": "FL",
+            "type": "Town",
+            "is_root": false,
+            "expanded_country": "United States"
+        },
+        "category": {
+            "id": 47,
+            "name": "Fiction",
+            "analytics_name": "Fiction",
+            "slug": "publishing/fiction",
+            "position": 7,
+            "parent_id": 18,
+            "parent_name": "Publishing",
+            "color": 14867664
+        },
+        "spotlight": false,
+        "percent_funded": 45.9,
+        "is_liked": false,
+        "is_disliked": false
+    },
+    "indiegogo":
+}

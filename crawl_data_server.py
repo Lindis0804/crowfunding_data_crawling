@@ -2,23 +2,35 @@ from fastapi import FastAPI
 from selenium.webdriver.chrome.options import Options
 from utils import get_data
 from utils import crawl_kickstarter_project_data
+from utils import crawl_diegogo_project_data
 from dotenv import load_dotenv
 import os
 import uvicorn
+import threading
+import json
 load_dotenv()
 url = 'https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page='
 
 # get the current page
-checkpoint = eval(open('./data/checkpoint.csv', "r").readline())
-current_page = checkpoint["page"]
-error_url_file = './data/error_url.csv'
-print(current_page)
+with open("./data/indiegogo_checkpoint.json", "r") as jf:
+    indiegogo_cur_page = json.load(jf)["page"]
+with open("./data/kickstarter_checkpoint.json", "r") as jf:
+    kickstarter_cur_page = json.load(jf)["page"]
+print(indiegogo_cur_page, kickstarter_cur_page)
 chrome_options = Options()
 chrome_options.add_experimental_option('detach', True)
 kafka_broker = os.environ.get("kafka_broker")
-topic = "kickstarter-project"
+k_topic = "kickstarter-project"
+i_topic = "indiegogo-project"
+topic = "project"
 # get_data(current_page=current_page, url=url, num_of_thread=4,
 #          checkpoint_file="./data/checkpoint.csv", error_url_file="./data/error_url.csv",
 #          producer=[kafka_broker, topic], web_driver_wait=10, delay_time=2)
-crawl_kickstarter_project_data(
-    current_page=current_page, producer=[kafka_broker, topic])
+i_thread = threading.Thread(target=crawl_diegogo_project_data, args=(
+    indiegogo_cur_page, [kafka_broker, topic]))
+k_thread = threading.Thread(target=crawl_kickstarter_project_data, args=(
+    kickstarter_cur_page, [kafka_broker, topic]))
+i_thread.start()
+k_thread.start()
+i_thread.join()
+k_thread.join()

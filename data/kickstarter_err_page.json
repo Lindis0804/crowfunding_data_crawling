@@ -1,0 +1,1 @@
+[{"page": 0, "err": "NoBrokersAvailable"}, {"page": 1, "err": "NoBrokersAvailable"}, {"page": 5, "err": "('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))"}]

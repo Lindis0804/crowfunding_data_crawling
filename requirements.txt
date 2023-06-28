@@ -11,3 +11,4 @@ python-dotenv
 undetected_chromedriver
 selenium-stealth
 fake_useragent
+pytz

@@ -1,9 +1,6 @@
-from fastapi import FastAPI
-import uvicorn
 import os
 from dotenv import load_dotenv
 from n_kafka.consumer import MessageConsumer
-app = FastAPI()
 load_dotenv()
 broker = os.environ.get("kafka_broker")
 topic = "project"

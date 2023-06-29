@@ -1,3 +1,4 @@
+from n_kafka.producer import ProjectProducer
 import selenium.common.exceptions
 import urllib3.exceptions
 from selenium import webdriver
@@ -13,20 +14,19 @@ import csv
 import traceback
 import multiprocessing
 from typing import Union
-from fastapi import FastAPI
-from n_kafka.producer import ProjectProducer
+# from fastapi import FastAPI
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-import undetected_chromedriver as uc
-from selenium_stealth import stealth
+# import undetected_chromedriver as uc
+# from selenium_stealth import stealth
 import random
 import json
 import requests
-from fake_useragent import UserAgent
+# from fake_useragent import UserAgent
 import pytz
-import tzdata
+# import tzdata
 
 
 def right_trim(lsts):
@@ -80,10 +80,6 @@ def get_first_not_null_item(lsts):
 
 def set_up_browser():
     chrome_options = webdriver.ChromeOptions()
-    # user_agent = UserAgent()
-    # fake_user_agent = user_agent.random
-    # chrome_options.add_argument("--incognito")
-    # chrome_options.add_argument(f'user-agent={fake_user_agent}')
     chrome_options.add_argument("--enable-javascript")
     chrome_options.add_argument("--enable-cookies")
     chrome_options.add_argument("--window-size=1366,768")

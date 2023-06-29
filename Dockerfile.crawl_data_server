@@ -1,0 +1,14 @@
+FROM python:3.9.0
+# COPY crawl_data_server.py requirements.txt utils.py ./data/ ./driver/ ./n_kafka/ ./
+COPY crawl_data_server.py /app/crawl_data_server.py
+COPY requirements.txt /app/requirements.txt
+COPY utils.py /app/utils.py
+COPY data /app/data
+COPY driver /app/driver
+COPY n_kafka /app/n_kafka
+ENV kafka_broker = "localhost:9092"
+ENV kickstarter-project = "kickstarter-project"
+ENV indiegogo-project = "indiegogo-project"
+WORKDIR /app
+RUN pip install -r requirements.txt
+CMD ["python","crawl_data_server.py"]

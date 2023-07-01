@@ -1,14 +1,30 @@
 FROM python:3.9.0
-# COPY crawl_data_server.py requirements.txt utils.py ./data/ ./driver/ ./n_kafka/ ./
+
+#install some extra package for chromedriver
+RUN apt-get install -yqq unzip
+RUN wget -O /tmp/chromedriver.zip http://chromedriver.storage.googleapis.com/`curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE`/chromedriver_linux64.zip
+RUN unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
+
+# install google chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+RUN sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+RUN apt-get -y update
+RUN apt-get install -y google-chrome-stable
+# copy file
 COPY crawl_data_server.py /app/crawl_data_server.py
 COPY requirements.txt /app/requirements.txt
 COPY utils.py /app/utils.py
 COPY data /app/data
 COPY driver /app/driver
 COPY n_kafka /app/n_kafka
+
+#set environment variables
 ENV kafka_broker = "localhost:9092"
 ENV kickstarter-project = "kickstarter-project"
 ENV indiegogo-project = "indiegogo-project"
+ENV DISPLAY=:99
+
+# work within directory app
 WORKDIR /app
 RUN pip install -r requirements.txt
 CMD ["python","crawl_data_server.py"]

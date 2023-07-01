@@ -14,17 +14,12 @@ import csv
 import traceback
 import multiprocessing
 from typing import Union
-# from fastapi import FastAPI
-from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-# import undetected_chromedriver as uc
-# from selenium_stealth import stealth
 import random
 import json
 import requests
-# from fake_useragent import UserAgent
 import pytz
 # import tzdata
 
@@ -80,20 +75,21 @@ def get_first_not_null_item(lsts):
 
 def set_up_browser():
     chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument("--enable-javascript")
     chrome_options.add_argument("--enable-cookies")
     chrome_options.add_argument("--window-size=1366,768")
-    chrome_options.add_argument(
-        "--disable-blink-features=AutomationControlled")
+    # chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
     # way 1:
-    # browser = webdriver.Chrome(
-    #     service=(Service(ChromeDriverManager().install())), options=chrome_options
-    # )
+    browser = webdriver.Chrome(
+        service=(Service(ChromeDriverManager().install())), options=chrome_options
+    )
 
     # way 2:
-    service = Service(executable_path='./driver/chromedriver')
-    browser = webdriver.Chrome(
-        service=service, options=chrome_options)
+    # service = Service(executable_path='./driver/chromedriver')
+    # browser = webdriver.Chrome(
+    #     service=service, options=chrome_options)
 
     return browser
 
@@ -352,6 +348,7 @@ def get_kickstarter_project_data_list_by_page(page,
 
             # save to mongodb
             print("[*] Save data to mongodb.")
+            print(data)
     except Exception as e:
         err_page = {
             "page": page,
@@ -454,6 +451,7 @@ def crawl_diegogo_project_data(current_page, producer=[], url="https://www.indie
                         projectProducer.send_msg(item)
                 else:
                     print("[*] Save to mongodb")
+                    print(data)
             elif res.status_code == 400:
                 page = 0
             page = page+1

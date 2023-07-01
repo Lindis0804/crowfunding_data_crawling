@@ -1,9 +1,7 @@
 selenium==4.10.0
 webdriver_manager==3.8.6
-pymongo==4.3.3
 requests==2.31.0
 urllib3==2.0.3
-fastapi==0.97.0
 confluent_kafka==2.1.1
 kafka-python==2.0.2
 python-dotenv==1.0.0

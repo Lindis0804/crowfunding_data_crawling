@@ -24,10 +24,12 @@ topic = "project"
 # get_data(current_page=current_page, url=url, num_of_thread=4,
 #          checkpoint_file="./data/checkpoint.csv", error_url_file="./data/error_url.csv",
 #          producer=[kafka_broker, topic], web_driver_wait=10, delay_time=2)
+# kafka_server = [kafka_broker, topic]
+kafka_server = []
 i_thread = threading.Thread(target=crawl_diegogo_project_data, args=(
-    indiegogo_cur_page, [kafka_broker, topic]))
+    indiegogo_cur_page, kafka_server))
 k_thread = threading.Thread(target=crawl_kickstarter_project_data, args=(
-    kickstarter_cur_page, [kafka_broker, topic]))
+    kickstarter_cur_page, kafka_server))
 i_thread.start()
 k_thread.start()
 i_thread.join()

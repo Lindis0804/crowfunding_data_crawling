@@ -1,6 +1,7 @@
 from kafka import KafkaConsumer, consumer
 from time import sleep
 import json
+import os
 
 
 class MessageConsumer:
@@ -26,15 +27,15 @@ class MessageConsumer:
     def activate_listener(self):
         consumer = self.consumer
         consumer.subscribe(self.topic)
-        print("[*] Consumer is listening....")
+        print(f"[*] Consumer is listening topic {self.topic}")
         try:
             for message in consumer:
                 project = message[6]
                 print(project)
                 """
-                Process project data by spark here.
+                Process indiegogo project data by spark here.
                 """
-                consumer.commit()
+            consumer.commit()
         except KeyboardInterrupt:
             print("Aborted by user...")
         finally:

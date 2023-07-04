@@ -24,6 +24,10 @@ import pytz
 # import tzdata
 
 
+def round_number(s):
+    return s - s % (10**(len(str(s))-1))
+
+
 def right_trim(lsts):
     ls = lsts
     le = len(ls)
@@ -75,12 +79,25 @@ def get_first_not_null_item(lsts):
 
 def set_up_browser():
     chrome_options = webdriver.ChromeOptions()
+    # chrome_options.add_argument("disable-blink-features")
+    # chrome_options.add_argument("disable-blink-features=AutomationControlled")
+    # cái sand box này làm cho docker bị treo
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument("--enable-javascript")
     chrome_options.add_argument("--enable-cookies")
-    chrome_options.add_argument("--window-size=1366,768")
-    # chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--log-level=3')
+    # chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument("--disable-extensions")
+    # chrome_options.add_argument("--disable-3d-apis")
+    # chrome_options.add_argument("--proxy-server='direct://'")
+    # chrome_options.add_argument("--proxy-bypass-list=*")
+    # chrome_options.add_argument("--start-maximized")
+    chrome_options.add_argument('--ignore-certificate-errors')
+    chrome_options.add_argument('--allow-running-insecure-content')
+    user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
+    chrome_options.add_argument(f'user-agent={user_agent}')
     # way 1:
     browser = webdriver.Chrome(
         service=(Service(ChromeDriverManager().install())), options=chrome_options
@@ -307,172 +324,3 @@ def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, 
                      checkpoint_file, producer=producer, web_driver_wait=web_driver_wait, delay_time=2)
             break
         browser.close()
-
-
-def field_filter(x):
-    obj = json.loads(x)
-    del obj["creator"]["avatar"]
-    del obj["creator"]["urls"]
-    del obj["category"]["urls"]
-    del obj["location"]["urls"]
-    del_list = ["state", "disable_communication", "currency_trailing_code",
-                'state_changed_at', 'staff_pick', 'is_starrable', "photo", "urls", "profile"]
-    for l in del_list:
-        if l in obj:
-            del obj[l]
-    return obj
-
-
-def get_kickstarter_project_data_list_by_page(page,
-                                              url="https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=",
-                                              error_page_file="./data/kickstarter_err_page.json", producer=[], web_driver_wait=5, delay_time=0.5):
-    browser = set_up_browser()
-    sleep(delay_time)
-
-    try:
-        browser.get(url+str(page))
-        wait = WebDriverWait(browser, web_driver_wait)
-        data = list(map(lambda x: field_filter(x.get_attribute("data-project")), browser.find_elements(
-            By.CSS_SELECTOR, "div[class='js-react-proj-card grid-col-12 grid-col-6-sm grid-col-4-lg']")[6:]))
-        print(data)
-        print(len(data))
-        if (len(producer) == 2):
-            kafka_broker, topic = producer
-            print("[*] Data from kickstarter sending to broker:",
-                  kafka_broker, ", topic:", topic)
-            projectProducer = ProjectProducer(broker=kafka_broker, topic=topic)
-            for item in data:
-                projectProducer.send_msg(item)
-
-        else:
-
-            # save to mongodb
-            print("[*] Save data to mongodb.")
-            print(data)
-    except Exception as e:
-        err_page = {
-            "page": page,
-            "err": str(e),
-        }
-        save_to_json_file(error_page_file, err_page)
-        traceback.print_exc()
-
-        # get_detail_project(
-        #     0, "https://www.kickstarter.com/projects/alexispowell/stay-at-home-to-sleep-in-lonely-gimmicks-ep?ref=discovery")
-
-
-def crawl_kickstarter_project_data(current_page, producer=[],
-                                   url="https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=",
-                                   error_page_file="./data/kickstarter_err_page.json", check_point_file="./data/kickstarter_checkpoint.json",
-                                   web_driver_wait=5, delay_time=5):
-    page = current_page
-    while (1):
-        get_kickstarter_project_data_list_by_page(
-            page, url, error_page_file, producer, web_driver_wait, delay_time)
-        page = page+1
-        save_to_json_file(check_point_file, {"page": page})
-        sleep(delay_time)
-
-
-def convert_timestring_to_unix(time_string):
-
-    # convert time string to datetime object
-    dt = datetime.fromisoformat(time_string)
-
-    # define timezone
-    timezone = pytz.timezone("America/Los_Angeles")
-
-    # apply timezone for datetime
-    localized_dt = timezone.localize(dt.replace(tzinfo=None))
-
-    # convert datetime object to unix timestamp
-    unix_time = int(localized_dt.timestamp())
-
-    return unix_time
-
-
-def format_indiegogo_project_data(input):
-    data = input
-
-    # change category
-    del data["category_url"]
-    data["category"] = {
-        "name": data.pop("category")
-    }
-
-    # change close date -> deadline
-    data["deadline"] = convert_timestring_to_unix(data.pop("close_date"))
-
-    # change open date -> launched_at
-    data["launched_at"] = convert_timestring_to_unix(data.pop("open_date"))
-
-    # change fund_raised_amount -> pledged
-    data["pledged"] = data.pop("funds_raised_amount")
-
-    # change funds_raised_percent -> percent_funded
-    data["percent_funded"] = data.pop("funds_raised_percent")
-
-    # change title -> name
-    data["name"] = data.pop("title")
-
-    # change tagline -> blurb
-    data["blurb"] = data.pop("tagline")
-
-    # change project_type -> ????
-
-    # change tags to -> ?????
-    return data
-
-
-def crawl_diegogo_project_data(current_page, producer=[], url="https://www.indiegogo.com/private_api/discover",
-                               err_page_file="./data/indiegogo_err_page.json", check_point_file="./data/indiegogo_checkpoint.json"):
-    page = current_page
-    request_body = json.dumps({"sort": "trending", "category_main": None, "category_top_level": None,
-                               "project_timing": "all", "project_type": "campaign", "page_num": page, "per_page": 12, "q": "", "tags": []})
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0"
-    }
-    while (1):
-        try:
-            res = requests.post(url, data=request_body, headers=headers)
-            sleep(30)
-            if res.status_code == 200:
-                data = list(
-                    map(lambda x: format_indiegogo_project_data(x),
-                        json.loads(res.text)["response"]["discoverables"]))
-                if (len(producer) == 2):
-                    kafka_broker, topic = producer
-                    print("[*] Data from Indiegogo sending to broker:",
-                          kafka_broker, ", topic:", topic)
-                    projectProducer = ProjectProducer(
-                        broker=kafka_broker, topic=topic)
-                    for item in data:
-                        projectProducer.send_msg(item)
-                else:
-                    print("[*] Save to mongodb")
-                    print(data)
-            elif res.status_code == 400:
-                page = 0
-            page = page+1
-            save_to_json_file(check_point_file, {"page": page})
-        except Exception as e:
-            err_page = {
-                "page": page,
-                "err": str(e),
-            }
-            save_to_json_file(err_page_file, err_page)
-            traceback.print_exc()
-
-
-# get_kickstarter_project_data_list_by_page(0)
-# crawl_diegogo_project_data(0)
-# print(convert_timestring_to_unix("2023-07-27T23:59:59-07:00"))
-# data1 = {
-#     "page": 100
-# }
-# data2 = {
-#     "name": "Đạt"
-# }
-# save_to_json_file("./data/indiegogo_checkpoint.json", data1)
-# save_to_json_file("./data/indiegogo_err_page.json", data2)

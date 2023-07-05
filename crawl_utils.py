@@ -14,6 +14,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 import threading
 
 
+def get_present():
+    return datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+
+
 def convert_timestring_to_unix(time_string):
 
     # convert time string to datetime object
@@ -85,11 +89,12 @@ def get_and_format_indiegogo_project_data(input, producer=[], web_driver_wait=5)
             country = ""
         data["backers_count"] = backers_count
         data["country"] = country
-        print(f"data: {data}")
+        data["timestamp"] = get_present()
         if (len(producer) == 2):
             kafka_broker, topic = producer
             print("[*] Data from Indiegogo sending to broker:",
                   kafka_broker, ", topic:", topic)
+            print(f"data: {data}")
             projectProducer = ProjectProducer(
                 broker=kafka_broker, topic=topic)
             projectProducer.send_msg(data)
@@ -106,7 +111,7 @@ def get_and_format_indiegogo_project_data(input, producer=[], web_driver_wait=5)
 
 
 def crawl_diegogo_project_data(current_page, producer=[], num_of_thread=5, url="https://www.indiegogo.com/private_api/discover",
-                               err_page_file="./data/indiegogo_err_page.json", check_point_file="./data/indiegogo_checkpoint.json"):
+                               err_page_file="./data/indiegogo_err_page.json", check_point_file="./data/indiegogo_checkpoint.json", sleep_per_crawling_time=60):
     page = current_page
     headers = {
         "Content-Type": "application/json",
@@ -131,14 +136,15 @@ def crawl_diegogo_project_data(current_page, producer=[], num_of_thread=5, url="
                         thr.join()
             # save_to_json_file("./data/indiegogo_data.json", data)
             elif res.status_code == 400:
-                page = 0
-                sleep(10)
+                page = -1
+                sleep(sleep_per_crawling_time)
         except Exception as e:
             err_page = {
                 "page": page,
                 "err": str(e),
             }
             save_to_json_file(err_page_file, err_page)
+
             traceback.print_exc()
         page = page+1
         save_to_json_file(check_point_file, {"page": page})
@@ -156,6 +162,7 @@ def field_filter(x):
         if l in obj:
             del obj[l]
     obj["category"] = [obj.pop("category")]
+    obj["timestamp"] = get_present()
     return obj
 
 
@@ -172,14 +179,15 @@ def get_kickstarter_project_data_list_by_page(page,
             By.CSS_SELECTOR, "div[class='js-react-proj-card grid-col-12 grid-col-6-sm grid-col-4-lg']")
         data = list(map(lambda x: field_filter(
             x.get_attribute("data-project")), elements[6:]))
-        print(data)
         print(len(data))
         if (len(producer) == 2):
             kafka_broker, topic = producer
             print("[*] Data from kickstarter sending to broker:",
                   kafka_broker, ", topic:", topic)
+            print(f"data: {data}")
             projectProducer = ProjectProducer(broker=kafka_broker, topic=topic)
             for item in data:
+                data["timestamp"] = get_present()
                 projectProducer.send_msg(item)
 
         else:
@@ -202,7 +210,7 @@ def get_kickstarter_project_data_list_by_page(page,
 def crawl_kickstarter_project_data(current_page, producer=[],
                                    url="https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=",
                                    error_page_file="./data/kickstarter_err_page.json", check_point_file="./data/kickstarter_checkpoint.json",
-                                   web_driver_wait=10, delay_time=5):
+                                   web_driver_wait=10, delay_time=5, sleep_per_crawling_time=60):
     page = current_page
     while (1):
         get_kickstarter_project_data_list_by_page(
@@ -211,7 +219,7 @@ def crawl_kickstarter_project_data(current_page, producer=[],
             page = page+1
         else:
             page = 0
-            sleep(10)
+            sleep(sleep_per_crawling_time)
         save_to_json_file(check_point_file, {"page": page})
 
 
@@ -227,7 +235,8 @@ def format_crowdfunder_project_data(input):
         "launched_at": convert_timestring_to_unix(input["created_at"]),
         "deadline": convert_timestring_to_unix(input["closing_at"]),
         "backers_count": input["num_backers"],
-        "category": [{"name": cate} for cate in input["category"]]
+        "category": [{"name": cate} for cate in input["category"]],
+        "timestamp": get_present()
     }
     return data
 
@@ -235,7 +244,8 @@ def format_crowdfunder_project_data(input):
 def crawl_crowdfunder_project_data(current_page, producer=[],
                                    url="https://7izdzrqwm2-dsn.algolia.net/1/indexes/*/queries?x-algolia-agent=Algolia%20for%20JavaScript%20(4.17.0)%3B%20Browser%20(lite)&x-algolia-api-key=9767ce6d672cff99e513892e0b798ae2&x-algolia-application-id=7IZDZRQWM2&paginationLimitedTo=2000",
                                    err_page_file="./data/crowdfunder_err_page.json",
-                                   check_point_file="./data/crowdfunder_checkpoint.json"
+                                   check_point_file="./data/crowdfunder_checkpoint.json",
+                                   sleep_per_crawling_time=60
                                    ):
     page = current_page
     headers = {
@@ -255,6 +265,7 @@ def crawl_crowdfunder_project_data(current_page, producer=[],
                         kafka_broker, topic = producer
                         print("[*] Data from Crowdfunder sending to broker:",
                               kafka_broker, ", topic:", topic)
+                        print(f"data: {data}")
                         projectProducer = ProjectProducer(
                             broker=kafka_broker, topic=topic)
                         for item in data:
@@ -276,4 +287,4 @@ def crawl_crowdfunder_project_data(current_page, producer=[],
                 break
             save_to_json_file(check_point_file, {"page": i})
         page = 0
-        sleep(60)
+        sleep(sleep_per_crawling_time)

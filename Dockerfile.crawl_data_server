@@ -20,7 +20,7 @@ COPY data /app/data
 COPY n_kafka /app/n_kafka
 
 #set environment variables
-ENV kafka_broker = "localhost:9092"
+ENV kafka_broker = "http://34.30.80.246:9092/"
 ENV kickstarter-project = "kickstarter-project"
 ENV indiegogo-project = "indiegogo-project"
 ENV DISPLAY=:99

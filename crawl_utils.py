@@ -14,6 +14,22 @@ from selenium.webdriver.support.ui import WebDriverWait
 import threading
 
 
+def send_data(data=[], producer=[]):
+    if (len(producer) == 2):
+        kafka_broker, topic = producer
+        print("[*] Data from kickstarter sending to broker:",
+              kafka_broker, ", topic:", topic)
+        # print(f"data: {data}")
+        projectProducer = ProjectProducer(broker=kafka_broker, topic=topic)
+        for item in data:
+            # item["timestamp"] = get_present()
+            projectProducer.send_msg(item)
+    else:
+        # save to mongodb
+        # print("[*] Save data to mongodb.")
+        print(data)
+
+
 def get_present():
     return datetime.today().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -90,18 +106,8 @@ def get_and_format_indiegogo_project_data(input, producer=[], web_driver_wait=5)
         data["backers_count"] = backers_count
         data["country"] = country
         data["timestamp"] = get_present()
-        if (len(producer) == 2):
-            kafka_broker, topic = producer
-            print("[*] Data from Indiegogo sending to broker:",
-                  kafka_broker, ", topic:", topic)
-            print(f"data: {data}")
-            projectProducer = ProjectProducer(
-                broker=kafka_broker, topic=topic)
-            projectProducer.send_msg(data)
-        else:
-            # print("[*] Save to mongodb")
-            # print(f"backer_count: {backers_count}, country: {country}")
-            print(data)
+        data["web"] = "indiegogo"
+        send_data([data], producer=producer)
     except:
         traceback.print_exc()
         # change project_type -> ????
@@ -110,8 +116,14 @@ def get_and_format_indiegogo_project_data(input, producer=[], web_driver_wait=5)
     return data
 
 
-def crawl_diegogo_project_data(current_page, producer=[], num_of_thread=5, url="https://www.indiegogo.com/private_api/discover",
-                               err_page_file="./data/indiegogo_err_page.json", check_point_file="./data/indiegogo_checkpoint.json", sleep_per_crawling_time=60):
+def crawl_diegogo_project_data(current_page, producer=[],
+                               web_driver_wait=2,
+                               num_of_thread=5,
+                               url="https://www.indiegogo.com/private_api/discover",
+                               err_page_file="./data/indiegogo_err_page.json",
+                               check_point_file="./data/indiegogo_checkpoint.json",
+                               sleep_per_crawling_time=60,
+                               ):
     page = current_page
     headers = {
         "Content-Type": "application/json",
@@ -129,7 +141,7 @@ def crawl_diegogo_project_data(current_page, producer=[], num_of_thread=5, url="
                     threads = []
                     for dt in dts:
                         threads.append(threading.Thread(
-                            target=get_and_format_indiegogo_project_data, args=(dt, producer)))
+                            target=get_and_format_indiegogo_project_data, args=(dt, producer, web_driver_wait)))
                     for thr in threads:
                         thr.start()
                     for thr in threads:
@@ -163,6 +175,7 @@ def field_filter(x):
             del obj[l]
     obj["category"] = [obj.pop("category")]
     obj["timestamp"] = get_present()
+    obj["web"] = "kickstarter"
     return obj
 
 
@@ -179,22 +192,7 @@ def get_kickstarter_project_data_list_by_page(page,
             By.CSS_SELECTOR, "div[class='js-react-proj-card grid-col-12 grid-col-6-sm grid-col-4-lg']")
         data = list(map(lambda x: field_filter(
             x.get_attribute("data-project")), elements[6:]))
-        print(len(data))
-        if (len(producer) == 2):
-            kafka_broker, topic = producer
-            print("[*] Data from kickstarter sending to broker:",
-                  kafka_broker, ", topic:", topic)
-            print(f"data: {data}")
-            projectProducer = ProjectProducer(broker=kafka_broker, topic=topic)
-            for item in data:
-                data["timestamp"] = get_present()
-                projectProducer.send_msg(item)
-
-        else:
-
-            # save to mongodb
-            # print("[*] Save data to mongodb.")
-            print(data)
+        send_data(data, producer=producer)
     except Exception as e:
         err_page = {
             "page": page,
@@ -209,7 +207,8 @@ def get_kickstarter_project_data_list_by_page(page,
 
 def crawl_kickstarter_project_data(current_page, producer=[],
                                    url="https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=",
-                                   error_page_file="./data/kickstarter_err_page.json", check_point_file="./data/kickstarter_checkpoint.json",
+                                   error_page_file="./data/kickstarter_err_page.json",
+                                   check_point_file="./data/kickstarter_checkpoint.json",
                                    web_driver_wait=10, delay_time=5, sleep_per_crawling_time=60):
     page = current_page
     while (1):
@@ -236,7 +235,8 @@ def format_crowdfunder_project_data(input):
         "deadline": convert_timestring_to_unix(input["closing_at"]),
         "backers_count": input["num_backers"],
         "category": [{"name": cate} for cate in input["category"]],
-        "timestamp": get_present()
+        "timestamp": get_present(),
+        "web": "crowdfunder"
     }
     return data
 
@@ -261,19 +261,7 @@ def crawl_crowdfunder_project_data(current_page, producer=[],
                 if (res.status_code == 200):
                     data = list(map(lambda x: format_crowdfunder_project_data(
                         x), json.loads(res.text)["results"][0]["hits"]))
-                    if (len(producer) == 2):
-                        kafka_broker, topic = producer
-                        print("[*] Data from Crowdfunder sending to broker:",
-                              kafka_broker, ", topic:", topic)
-                        print(f"data: {data}")
-                        projectProducer = ProjectProducer(
-                            broker=kafka_broker, topic=topic)
-                        for item in data:
-                            projectProducer.send_msg(item)
-                    else:
-                        # print("[*] Save to mongodb")
-                        print(data)
-                        save_to_json_file("./data/crowdfunder_data.json", data)
+                    send_data(data, producer)
                 else:
                     print(f"status_code: {res.status_code}")
                     raise Exception("Error.")

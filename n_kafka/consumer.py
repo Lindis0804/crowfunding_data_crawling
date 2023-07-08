@@ -4,6 +4,17 @@ import json
 import os
 
 
+def save_to_json_file(file_addr, data):
+    with open(file_addr, "r") as jf:
+        cur_data = json.load(jf)
+    if (isinstance(cur_data, list)):
+        cur_data.append(data)
+    elif (isinstance(cur_data, dict)):
+        cur_data = data
+    with open(file_addr, "w") as jf:
+        json.dump(cur_data, jf)
+
+
 class MessageConsumer:
     broker = ""
     topic = ""
@@ -32,6 +43,7 @@ class MessageConsumer:
             for message in consumer:
                 project = message[6]
                 print(project)
+                save_to_json_file("../data/data.json", project)
                 """
                 Process indiegogo project data by spark here.
                 """

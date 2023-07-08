@@ -139,7 +139,8 @@ def save_to_mongodb(data, db_name="local", collection_name="kickstarter_err_url"
         traceback.print_exc()
 
 
-def get_detail_project(page, url, error_url_file="./data/err_url.csv", producer=[], web_driver_wait=5, delay_time=0.5):
+def get_detail_project(page, url, error_url_file="./data/err_url.csv",
+                       producer=[], web_driver_wait=5, delay_time=0.5):
     """
     This func is used to crawl data of a detail project page of Kickstarter website
 
@@ -266,7 +267,8 @@ def get_detail_project(page, url, error_url_file="./data/err_url.csv", producer=
     browser.close()
 
 
-def get_data(url, current_page, num_of_thread, error_url_file, checkpoint_file, producer=[], web_driver_wait=5, delay_time=0.5):
+def get_data(url, current_page, num_of_thread, error_url_file,
+             checkpoint_file, producer=[], web_driver_wait=5, delay_time=0.5):
     """
     This func is used to crawl data from Kickstarter website (
         https://www.kickstarter.com/discover/advanced?woe_id=0&sort=magic&seed=2811224&page=

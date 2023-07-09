@@ -24,8 +24,8 @@ k_topic = os.environ.get("kickstarter-project")
 i_topic = os.environ.get("indiegogo-project")
 topic = "project"
 
-kafka_server = [kafka_broker, topic]
-# kafka_server = []
+# kafka_server = [kafka_broker, topic]
+kafka_server = []
 i_thread = threading.Thread(target=crawl_diegogo_project_data, args=(
     indiegogo_cur_page, kafka_server, 5))
 k_thread = threading.Thread(target=crawl_kickstarter_project_data, args=(

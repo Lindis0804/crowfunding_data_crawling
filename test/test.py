@@ -19,22 +19,31 @@
 # print(h2_text)
 
 # test urlib
-import requests
-import math
-from bs4 import BeautifulSoup
-s = 21111
-round_num = s - s % (10**(len(str(s))-1))
-print(round_num)
+# import requests
+# import math
+# from bs4 import BeautifulSoup
+# s = 21111
+# round_num = s - s % (10**(len(str(s))-1))
+# print(round_num)
 
-# test requests to indiegogo
-headers = {
-    "Content-Type": "application/json",
-    "User-Agent": "Mozilla/5.0"
-}
-res = requests.get(
-    "https://www.indiegogo.com/projects/shi-senryaku-omnibus-edition", headers=headers)
-if (res.status_code == 200):
-    print(res.text)
-    soup = BeautifulSoup(res.text, "html.parser")
-else:
-    print(res.status_code)
+# # test requests to indiegogo
+# headers = {
+#     "Content-Type": "application/json",
+#     "User-Agent": "Mozilla/5.0"
+# }
+# res = requests.get(
+#     "https://www.indiegogo.com/projects/shi-senryaku-omnibus-edition", headers=headers)
+# if (res.status_code == 200):
+#     print(res.text)
+#     soup = BeautifulSoup(res.text, "html.parser")
+# else:
+#     print(res.status_code)
+
+# test spark
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.appName("WordCount").getOrCreate()
+input_file = "../data/kr.txt"
+df = spark.sparkContext.textFile(input_file)
+words_rdd = df.flatMap(lambda line: line.split(" "))
+word_count = words_rdd.count()
+print(word_count)

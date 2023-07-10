@@ -81,9 +81,6 @@ def get_and_format_indiegogo_project_data(input, producer=[], web_driver_wait=5)
     # change title -> name
     data["name"] = data.pop("title")
 
-    # change tagline -> blurb
-    data["blurb"] = data.pop("tagline")
-
     if (data["pledged"] == 0 or data["percent_funded"] == 0):
         data["goal"] = 0
     else:
@@ -97,7 +94,7 @@ def get_and_format_indiegogo_project_data(input, producer=[], web_driver_wait=5)
         print(f"url: {'https: // www.indiegogo.com'+data['clickthrough_url']}")
         wait = WebDriverWait(browser, web_driver_wait)
         # browser.get_screenshot_as_file("screenshot.png")
-        backer_elements = bdã muarowser.find_elements(
+        backer_elements = browser.find_elements(
             By.CSS_SELECTOR, "span.basicsGoalProgress-claimedOrBackers > span")
         # print(f"backers_elements: {backer_elements}")
         try:
@@ -113,7 +110,6 @@ def get_and_format_indiegogo_project_data(input, producer=[], web_driver_wait=5)
             country = ""
         data["backers_count"] = backers_count
         data["country"] = country
-        data["timestamp"] = get_present()
         data["web"] = "indiegogo"
         send_data([data], producer=producer)
     except:
@@ -156,8 +152,8 @@ def crawl_diegogo_project_data(current_page, producer=[],
                         thr.join()
             # save_to_json_file("./data/indiegogo_data.json", data)
             elif res.status_code == 400:
-                page = -1
-                sleep(sleep_per_crawling_time)
+                save_to_json_file(check_point_file, {"page": 0})
+                break
         except Exception as e:
             err_page = {
                 "page": page,
@@ -182,7 +178,6 @@ def field_filter(x):
         if l in obj:
             del obj[l]
     obj["category"] = [obj.pop("category")]
-    obj["timestamp"] = get_present()
     obj["web"] = "kickstarter"
     return obj
 
@@ -225,8 +220,8 @@ def crawl_kickstarter_project_data(current_page, producer=[],
         if page <= 49268:
             page = page+1
         else:
-            page = 0
-            sleep(sleep_per_crawling_time)
+            save_to_json_file(check_point_file, {"page":0})
+            break
         save_to_json_file(check_point_file, {"page": page})
 
 
@@ -243,7 +238,6 @@ def format_crowdfunder_project_data(input):
         "deadline": convert_timestring_to_unix(input["closing_at"]),
         "backers_count": input["num_backers"],
         "category": [{"name": cate} for cate in input["category"]],
-        "timestamp": get_present(),
         "web": "crowdfunder"
     }
     return data
@@ -282,5 +276,4 @@ def crawl_crowdfunder_project_data(current_page, producer=[],
                 traceback.print_exc()
                 break
             save_to_json_file(check_point_file, {"page": i})
-        page = 0
-        sleep(sleep_per_crawling_time)
+        save_to_json_file(check_point_file, {"page": 0})

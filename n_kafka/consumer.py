@@ -43,7 +43,7 @@ class MessageConsumer:
             for message in consumer:
                 project = message[6]
                 print(project)
-                save_to_json_file("../data/data.json", project)
+                save_to_json_file("D:/bigdata/Project/crowfunding_data_crawling/data/data.json", project)
                 """
                 Process indiegogo project data by spark here.
                 """
